@@ -1,20 +1,21 @@
 import 'package:geolocator/geolocator.dart';
 
+import '../contracts/location_service_interface.dart';
+import '../models/location_point.dart';
 import '../utils/logger.dart';
 
 /// Handles device location: permissions and current position.
-class LocationService {
-  /// Check if location services are enabled.
+/// Implements [LocationServiceInterface] for dependency inversion (SOLID).
+class LocationService implements LocationServiceInterface {
+  @override
   Future<bool> isLocationServiceEnabled() async {
     return Geolocator.isLocationServiceEnabled();
   }
 
-  /// Check current permission status.
   Future<LocationPermission> checkPermission() async {
     return Geolocator.checkPermission();
   }
 
-  /// Request location permission. Returns true if granted (always or whileInUse).
   Future<bool> requestPermission() async {
     final status = await Geolocator.requestPermission();
     final granted = status == LocationPermission.whileInUse ||
@@ -25,7 +26,7 @@ class LocationService {
     return granted;
   }
 
-  /// Ensure we have permission; request if not. Returns true if we can use location.
+  @override
   Future<bool> ensurePermission() async {
     var permission = await checkPermission();
     if (permission == LocationPermission.denied) {
@@ -37,8 +38,8 @@ class LocationService {
         permission == LocationPermission.always;
   }
 
-  /// Get current position. Throws if permission or service unavailable.
-  Future<Position> getCurrentPosition() async {
+  @override
+  Future<LocationPoint> getCurrentPosition() async {
     final enabled = await isLocationServiceEnabled();
     if (!enabled) {
       throw LocationServiceException('Location services are disabled.');
@@ -47,10 +48,14 @@ class LocationService {
     if (!ok) {
       throw LocationServiceException('Location permission denied.');
     }
-    return Geolocator.getCurrentPosition(
+    final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
       ),
+    );
+    return LocationPoint(
+      latitude: position.latitude,
+      longitude: position.longitude,
     );
   }
 }

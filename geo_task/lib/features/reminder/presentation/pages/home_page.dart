@@ -1,21 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/services/location_service.dart';
+import '../../../../core/router/app_router.dart';
 import '../../domain/entities/geo_reminder.dart';
 import '../stores/reminder_store.dart';
-import 'add_reminder_page.dart';
 
-/// Home screen: list of reminders and FAB to add new.
+/// Home screen: list of reminders and FAB to add new (View in MVVM).
 class HomePage extends StatefulWidget {
-  const HomePage({
-    super.key,
-    required this.store,
-    required this.locationService,
-  });
+  const HomePage({super.key, required this.store});
 
   final ReminderStore store;
-  final LocationService locationService;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -29,16 +25,26 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openAddReminder() async {
-    final added = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => AddReminderPage(
-          store: widget.store,
-          locationService: widget.locationService,
-        ),
-      ),
-    );
-    if (added == true && mounted) {
+    final result = await context.push<bool>(AppRoutes.add);
+    if (result == true && mounted) {
       widget.store.loadReminders();
+    }
+  }
+
+  Future<void> _openEditReminder(GeoReminder reminder) async {
+    final result = await context.push<bool>(AppRoutes.editWithId(reminder.id));
+    if (result == true && mounted) {
+      widget.store.loadReminders();
+    }
+  }
+
+  /// Debug only: show the same notification as when geofence triggers (no movement needed).
+  Future<void> _testTriggerNotification(GeoReminder reminder) async {
+    await widget.store.showTestNotification(reminder);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Test notification sent')),
+      );
     }
   }
 
@@ -84,7 +90,11 @@ class _HomePageState extends State<HomePage> {
                 reminder: r,
                 onToggle: (value) =>
                     widget.store.toggleReminder(r.id, value),
+                onEdit: () => _openEditReminder(r),
                 onDelete: () => widget.store.deleteReminder(r.id),
+                onTestTrigger: kDebugMode
+                    ? () => _testTriggerNotification(r)
+                    : null,
               );
             },
           );
@@ -102,12 +112,17 @@ class _ReminderTile extends StatelessWidget {
   const _ReminderTile({
     required this.reminder,
     required this.onToggle,
+    required this.onEdit,
     required this.onDelete,
+    this.onTestTrigger,
   });
 
   final GeoReminder reminder;
   final ValueChanged<bool> onToggle;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
+  /// Debug only: simulate geofence trigger (show notification). Non-null only in debug build.
+  final VoidCallback? onTestTrigger;
 
   @override
   Widget build(BuildContext context) {
@@ -116,11 +131,15 @@ class _ReminderTile extends StatelessWidget {
       child: SwitchListTile(
         value: reminder.isActive,
         onChanged: onToggle,
-        title: Text(
-          reminder.title,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            decoration: reminder.isActive ? null : TextDecoration.lineThrough,
+        title: GestureDetector(
+          onTap: onEdit,
+          behavior: HitTestBehavior.opaque,
+          child: Text(
+            reminder.title,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              decoration: reminder.isActive ? null : TextDecoration.lineThrough,
+            ),
           ),
         ),
         subtitle: Column(
@@ -141,32 +160,49 @@ class _ReminderTile extends StatelessWidget {
             ),
           ],
         ),
-        secondary: IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Delete reminder?'),
-                content: Text(
-                  'Remove "${reminder.title}"? This cannot be undone.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Cancel'),
-                  ),
-                  FilledButton(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      onDelete();
-                    },
-                    child: const Text('Delete'),
-                  ),
-                ],
+        secondary: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onTestTrigger != null)
+              IconButton(
+                icon: const Icon(Icons.notifications_active_outlined),
+                onPressed: onTestTrigger,
+                tooltip: 'Test notification (debug)',
               ),
-            );
-          },
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: onEdit,
+              tooltip: 'Edit',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete reminder?'),
+                    content: Text(
+                      'Remove "${reminder.title}"? This cannot be undone.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          onDelete();
+                        },
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              tooltip: 'Delete',
+            ),
+          ],
         ),
       ),
     );

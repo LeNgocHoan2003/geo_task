@@ -1,10 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../constants/app_constants.dart';
+import '../contracts/notification_service_interface.dart';
 import '../utils/logger.dart';
 
 /// Shows local notifications when a geofence is triggered.
-class NotificationService {
+/// Implements [NotificationServiceInterface] for dependency inversion (SOLID).
+class NotificationService implements NotificationServiceInterface {
   NotificationService() {
     _plugin = FlutterLocalNotificationsPlugin();
   }
@@ -12,7 +17,19 @@ class NotificationService {
   late final FlutterLocalNotificationsPlugin _plugin;
   bool _initialized = false;
 
-  /// Initialize the plugin and create the notification channel (Android).
+  /// Request notification permission (required on Android 13+).
+  /// Call this before showing notifications; [initialize] calls it on Android.
+  static Future<bool> requestPermission() async {
+    if (!Platform.isAndroid) return true;
+    final status = await Permission.notification.request();
+    final granted = status.isGranted;
+    if (!granted) {
+      logInfo('Notification permission not granted: $status');
+    }
+    return granted;
+  }
+
+  @override
   Future<void> initialize() async {
     if (_initialized) return;
 
@@ -37,11 +54,16 @@ class NotificationService {
       description: 'Notifications when you enter or leave a reminder location.',
       importance: Importance.high,
       playSound: true,
+      enableVibration: true,
+      showBadge: true,
     );
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
+
+    // Android 13+ (API 33+): must request POST_NOTIFICATIONS at runtime or notifications won't show
+    await requestPermission();
 
     _initialized = true;
     logInfo('NotificationService initialized');
@@ -52,13 +74,14 @@ class NotificationService {
     // TODO: optionally navigate to reminder detail when app opens from notification
   }
 
-  /// Show a reminder notification (title and body).
+  @override
   Future<void> showReminder({
     required int id,
     required String title,
     String body = '',
   }) async {
     if (!_initialized) await initialize();
+    if (Platform.isAndroid) await requestPermission();
 
     const androidDetails = AndroidNotificationDetails(
       AppConstants.notificationChannelId,
@@ -67,6 +90,9 @@ class NotificationService {
           'Notifications when you enter or leave a reminder location.',
       importance: Importance.high,
       priority: Priority.high,
+      channelShowBadge: true,
+      playSound: true,
+      enableVibration: true,
     );
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
@@ -78,7 +104,9 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    await _plugin.show(id, title, body.isNotEmpty ? body : title, details);
+    // Use reminder title for both title and fallback body so the title is always visible
+    final content = body.isNotEmpty ? body : title;
+    await _plugin.show(id, title, content, details);
     logInfo('Notification shown: $title');
   }
 }

@@ -3,18 +3,20 @@ import 'dart:async';
 import 'package:flutter_background_geofencing/flutter_background_geofencing.dart';
 
 import '../../features/reminder/domain/entities/geo_reminder.dart';
+import '../contracts/geofence_service_interface.dart';
+import '../contracts/notification_service_interface.dart';
 import '../models/geofence_reminder_mapping.dart';
 import '../utils/logger.dart';
-import 'notification_service.dart';
 
 /// Uses native platform geofencing (Android GeofencingClient / iOS CLLocationManager)
 /// so triggers work when the app is in background or killed.
-class GeofenceService {
+/// Implements [GeofenceServiceInterface] and depends on [NotificationServiceInterface] (SOLID).
+class GeofenceService implements GeofenceServiceInterface {
   GeofenceService(this._notificationService) {
     _service = GeofencingService();
   }
 
-  final NotificationService _notificationService;
+  final NotificationServiceInterface _notificationService;
   late final GeofencingService _service;
   final _mapping = GeofenceReminderMapping();
   final _registeredIds = <String>[];
@@ -24,6 +26,7 @@ class GeofenceService {
   /// Minimum radius for native APIs (Android recommends 100m).
   static const double _minRadiusMeters = 100;
 
+  @override
   bool get isRunning => _started;
 
   GeofenceRegion _toRegion(GeoReminder r) {
@@ -41,7 +44,7 @@ class GeofenceService {
     );
   }
 
-  /// Start the native geofencing service and register active reminders.
+  @override
   Future<void> start(List<GeoReminder> activeReminders) async {
     if (_started) {
       logInfo('GeofenceService already started, syncing regions');
@@ -97,15 +100,17 @@ class GeofenceService {
     if (wantEnter != isEnter) return;
 
     final title = reminder.title;
+    final defaultMessage =
+        isEnter ? 'You entered the area.' : 'You left the area.';
     final body = reminder.description.isNotEmpty
         ? reminder.description
-        : (isEnter ? 'You entered the area.' : 'You left the area.');
+        : '$title — $defaultMessage';
     final id = reminder.id.hashCode.abs() % 0x7FFFFFFF;
 
     _notificationService.showReminder(id: id, title: title, body: body);
   }
 
-  /// Add one reminder and its geofence (service must already be started).
+  @override
   Future<void> addReminder(GeoReminder reminder) async {
     if (!reminder.isActive) return;
     _mapping.add(reminder);
@@ -114,7 +119,7 @@ class GeofenceService {
     logInfo('Geofence added for reminder ${reminder.id}');
   }
 
-  /// Remove geofence for reminder [id].
+  @override
   Future<void> removeReminder(String id) async {
     _mapping.remove(id);
     _registeredIds.remove(id);
@@ -122,12 +127,12 @@ class GeofenceService {
     logInfo('Geofence removed for $id');
   }
 
-  /// Refresh geofences from a full list of reminders (e.g. after toggle or load).
+  @override
   Future<void> syncReminders(List<GeoReminder> reminders) async {
     await _syncRegions(reminders);
   }
 
-  /// Stop the service and remove listener.
+  @override
   Future<void> stop() async {
     if (!_started) return;
     await _eventSubscription?.cancel();

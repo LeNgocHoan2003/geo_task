@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/services/location_service.dart';
 import '../../domain/entities/geo_reminder.dart';
 import '../stores/reminder_store.dart';
 
-/// Screen to create a new location-based reminder.
+/// Screen to create or edit a location-based reminder (View in MVVM).
 /// Uses OpenStreetMap via flutter_map (no API key required).
 class AddReminderPage extends StatefulWidget {
   const AddReminderPage({
     super.key,
     required this.store,
-    required this.locationService,
+    this.existingReminder,
   });
 
   final ReminderStore store;
-  final LocationService locationService;
+  /// When non-null, the form is in edit mode (pre-filled, update on save).
+  final GeoReminder? existingReminder;
 
   @override
   State<AddReminderPage> createState() => _AddReminderPageState();
@@ -37,21 +38,35 @@ class _AddReminderPageState extends State<AddReminderPage> {
   GeoTriggerType _triggerType = GeoTriggerType.enter;
   bool _saving = false;
 
+  bool get _isEditing => widget.existingReminder != null;
   LatLng get _selectedPoint => LatLng(_latitude, _longitude);
 
   @override
   void initState() {
     super.initState();
-    _initLocation();
+    final existing = widget.existingReminder;
+    if (existing != null) {
+      _titleController.text = existing.title;
+      _descriptionController.text = existing.description;
+      _latitude = existing.latitude;
+      _longitude = existing.longitude;
+      _radius = existing.radius;
+      _triggerType = existing.triggerType;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _mapController.move(_selectedPoint, 15);
+      });
+    } else {
+      _initLocation();
+    }
   }
 
   Future<void> _initLocation() async {
     try {
-      final position = await widget.locationService.getCurrentPosition();
+      final point = await widget.store.getCurrentPosition();
       if (mounted) {
         setState(() {
-          _latitude = position.latitude;
-          _longitude = position.longitude;
+          _latitude = point.latitude;
+          _longitude = point.longitude;
         });
         _mapController.move(_selectedPoint, 15);
       }
@@ -80,20 +95,34 @@ class _AddReminderPageState extends State<AddReminderPage> {
 
     setState(() => _saving = true);
     try {
-      final reminder = GeoReminder(
-        id: const Uuid().v4(),
-        title: title,
-        description: _descriptionController.text.trim(),
-        latitude: _latitude,
-        longitude: _longitude,
-        radius: _radius,
-        triggerType: _triggerType,
-        isActive: true,
-        createdAt: DateTime.now(),
-      );
-      await widget.store.addReminder(reminder);
+      final existing = widget.existingReminder;
+      final reminder = existing != null
+          ? existing.copyWith(
+              title: title,
+              description: _descriptionController.text.trim(),
+              latitude: _latitude,
+              longitude: _longitude,
+              radius: _radius,
+              triggerType: _triggerType,
+            )
+          : GeoReminder(
+              id: const Uuid().v4(),
+              title: title,
+              description: _descriptionController.text.trim(),
+              latitude: _latitude,
+              longitude: _longitude,
+              radius: _radius,
+              triggerType: _triggerType,
+              isActive: true,
+              createdAt: DateTime.now(),
+            );
+      if (_isEditing) {
+        await widget.store.updateReminder(reminder);
+      } else {
+        await widget.store.addReminder(reminder);
+      }
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      if (context.mounted) context.pop(true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -108,7 +137,7 @@ class _AddReminderPageState extends State<AddReminderPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Reminder'),
+        title: Text(_isEditing ? 'Edit Reminder' : 'Add Reminder'),
       ),
       body: Observer(
         builder: (_) {
@@ -258,7 +287,7 @@ class _AddReminderPageState extends State<AddReminderPage> {
                       width: 24,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save Reminder'),
+                  : Text(_isEditing ? 'Update Reminder' : 'Save Reminder'),
             ),
           ],
         ),

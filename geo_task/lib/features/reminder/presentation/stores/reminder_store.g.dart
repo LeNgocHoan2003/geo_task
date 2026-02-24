@@ -82,12 +82,46 @@ mixin _$ReminderStore on ReminderStoreBase, Store {
         .run(() => super.toggleReminder(id, isActive));
   }
 
+  late final _$updateReminderAsyncAction =
+      AsyncAction('ReminderStoreBase.updateReminder', context: context);
+
+  @override
+  Future<void> updateReminder(GeoReminder reminder) {
+    return _$updateReminderAsyncAction
+        .run(() => super.updateReminder(reminder));
+  }
+
   late final _$deleteReminderAsyncAction =
       AsyncAction('ReminderStoreBase.deleteReminder', context: context);
 
   @override
   Future<void> deleteReminder(String id) {
     return _$deleteReminderAsyncAction.run(() => super.deleteReminder(id));
+  }
+
+  late final _$ReminderStoreBaseActionController =
+      ActionController(name: 'ReminderStoreBase', context: context);
+
+  @override
+  void _setLoading(bool value) {
+    final _$actionInfo = _$ReminderStoreBaseActionController.startAction(
+        name: 'ReminderStoreBase._setLoading');
+    try {
+      return super._setLoading(value);
+    } finally {
+      _$ReminderStoreBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  void _clearError() {
+    final _$actionInfo = _$ReminderStoreBaseActionController.startAction(
+        name: 'ReminderStoreBase._clearError');
+    try {
+      return super._clearError();
+    } finally {
+      _$ReminderStoreBaseActionController.endAction(_$actionInfo);
+    }
   }
 
   @override
