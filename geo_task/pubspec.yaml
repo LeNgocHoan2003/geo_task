@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
   # Location & geofencing
   geolocator: ^13.0.2
-  geofence_service: ^6.0.0
+  flutter_background_geofencing: ^1.0.0
   # Maps (OpenStreetMap, no API key required)
   flutter_map: ^7.0.2
   latlong2: ^0.9.1

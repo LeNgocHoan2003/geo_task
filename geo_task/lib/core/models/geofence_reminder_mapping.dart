@@ -14,5 +14,7 @@ class GeofenceReminderMapping {
 
   GeoReminder? get(String id) => _map[id];
 
+  Iterable<String> get ids => _map.keys;
+
   void clear() => _map.clear();
 }

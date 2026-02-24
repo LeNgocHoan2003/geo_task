@@ -31,7 +31,7 @@ abstract class ReminderStoreBase with Store {
     try {
       final list = await _repository.getReminders();
       reminders = ObservableList.of(list);
-      _geofenceService.syncReminders(list);
+      await _geofenceService.syncReminders(list);
     } catch (e) {
       errorMessage = e.toString();
     } finally {
@@ -46,7 +46,7 @@ abstract class ReminderStoreBase with Store {
       await _repository.saveReminder(reminder);
       reminders.insert(0, reminder);
       if (reminder.isActive) {
-        _geofenceService.addReminder(reminder);
+        await _geofenceService.addReminder(reminder);
       }
     } catch (e) {
       errorMessage = e.toString();
@@ -63,7 +63,7 @@ abstract class ReminderStoreBase with Store {
       if (index >= 0) {
         final updated = reminders[index].copyWith(isActive: isActive);
         reminders[index] = updated;
-        _geofenceService.syncReminders(reminders.toList());
+        await _geofenceService.syncReminders(reminders.toList());
       }
     } catch (e) {
       errorMessage = e.toString();
@@ -76,7 +76,7 @@ abstract class ReminderStoreBase with Store {
     try {
       await _repository.deleteReminder(id);
       reminders.removeWhere((r) => r.id == id);
-      _geofenceService.removeReminder(id);
+      await _geofenceService.removeReminder(id);
     } catch (e) {
       errorMessage = e.toString();
     }
