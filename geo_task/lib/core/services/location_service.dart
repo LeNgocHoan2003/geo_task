@@ -58,6 +58,20 @@ class LocationService implements LocationServiceInterface {
       longitude: position.longitude,
     );
   }
+
+  @override
+  Stream<LocationPoint> getPositionStream() {
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.medium,
+      distanceFilter: 50,
+    );
+    return Geolocator.getPositionStream(locationSettings: locationSettings).map(
+      (Position position) => LocationPoint(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      ),
+    );
+  }
 }
 
 class LocationServiceException implements Exception {

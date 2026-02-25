@@ -15,16 +15,28 @@ class ReminderStore = ReminderStoreBase with _$ReminderStore;
 
 abstract class ReminderStoreBase with Store {
   ReminderStoreBase({
-    required ReminderUseCases useCases,
+    required GetReminders getReminders,
+    required CreateReminder createReminder,
+    required UpdateReminder updateReminder,
+    required DeleteReminder deleteReminder,
+    required ToggleReminder toggleReminder,
     required GeofenceServiceInterface geofenceService,
     required LocationServiceInterface locationService,
     required NotificationServiceInterface notificationService,
-  })  : _useCases = useCases,
+  })  : _getReminders = getReminders,
+        _createReminder = createReminder,
+        _updateReminder = updateReminder,
+        _deleteReminder = deleteReminder,
+        _toggleReminder = toggleReminder,
         _geofenceService = geofenceService,
         _locationService = locationService,
         _notificationService = notificationService;
 
-  final ReminderUseCases _useCases;
+  final GetReminders _getReminders;
+  final CreateReminder _createReminder;
+  final UpdateReminder _updateReminder;
+  final DeleteReminder _deleteReminder;
+  final ToggleReminder _toggleReminder;
   final GeofenceServiceInterface _geofenceService;
   final LocationServiceInterface _locationService;
   final NotificationServiceInterface _notificationService;
@@ -43,7 +55,7 @@ abstract class ReminderStoreBase with Store {
     _setLoading(true);
     _clearError();
     try {
-      final list = await _useCases.getReminders.call();
+      final list = await _getReminders.call();
       reminders = ObservableList.of(list);
       await _geofenceService.syncReminders(list);
     } catch (e) {
@@ -57,10 +69,11 @@ abstract class ReminderStoreBase with Store {
   Future<void> addReminder(GeoReminder reminder) async {
     _clearError();
     try {
-      await _useCases.createReminder.call(reminder);
+      await _createReminder.call(reminder);
       reminders.insert(0, reminder);
       if (reminder.isActive) {
-        await _geofenceService.addReminder(reminder);
+        // Full sync so native geofence client picks up first region (fixes cold start with 0 reminders).
+        await _geofenceService.syncReminders(reminders.toList());
       }
     } catch (e) {
       errorMessage = e.toString();
@@ -72,7 +85,7 @@ abstract class ReminderStoreBase with Store {
   Future<void> toggleReminder(String id, bool isActive) async {
     _clearError();
     try {
-      await _useCases.toggleReminder.call(id, isActive);
+      await _toggleReminder.call(id, isActive);
       final index = reminders.indexWhere((r) => r.id == id);
       if (index >= 0) {
         final updated = reminders[index].copyWith(isActive: isActive);
@@ -88,7 +101,7 @@ abstract class ReminderStoreBase with Store {
   Future<void> updateReminder(GeoReminder reminder) async {
     _clearError();
     try {
-      await _useCases.updateReminder.call(reminder);
+      await _updateReminder.call(reminder);
       final index = reminders.indexWhere((r) => r.id == reminder.id);
       if (index >= 0) {
         reminders[index] = reminder;
@@ -104,7 +117,7 @@ abstract class ReminderStoreBase with Store {
   Future<void> deleteReminder(String id) async {
     _clearError();
     try {
-      await _useCases.deleteReminder.call(id);
+      await _deleteReminder.call(id);
       reminders.removeWhere((r) => r.id == id);
       await _geofenceService.removeReminder(id);
     } catch (e) {

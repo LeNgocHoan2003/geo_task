@@ -1,66 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
-import 'core/constants/app_constants.dart';
-import 'core/router/app_router.dart';
-import 'core/services/geofence_service.dart';
-import 'core/services/location_service.dart';
-import 'core/services/notification_service.dart';
-import 'features/reminder/data/datasources/reminder_local_datasource_impl.dart';
-import 'features/reminder/data/repositories/reminder_repository_impl.dart';
-import 'features/reminder/domain/usecases/reminder_use_cases.dart';
-import 'features/reminder/presentation/stores/reminder_store.dart';
+import 'core/di/injection.dart';
+import 'core/theme/app_theme.dart';
+import 'core/utils/logger.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Hive.initFlutter();
-  await ReminderLocalDatasourceImpl.openBox();
-
-  // Infrastructure
-  final notificationService = NotificationService();
-  await notificationService.initialize();
-
-  final locationService = LocationService();
-  final geofenceService = GeofenceService(notificationService);
-
-  // Data + domain
-  final repository = ReminderRepositoryImpl(
-    ReminderLocalDatasourceImpl(Hive.box(AppConstants.remindersBoxName)),
-  );
-  final useCases = ReminderUseCases(repository);
-
-  // ViewModel
-  final store = ReminderStore(
-    useCases: useCases,
-    geofenceService: geofenceService,
-    locationService: locationService,
-    notificationService: notificationService,
-  );
-
-  // Bootstrap: load reminders and start geofence monitoring
-  await store.loadReminders();
-  await geofenceService.start(store.reminders.toList());
-
-  final router = createAppRouter(store);
-  runApp(GeoTaskApp(router: router));
+  runApp(GeoTaskApp(bootstrap: _bootstrapApp));
 }
 
-class GeoTaskApp extends StatelessWidget {
-  const GeoTaskApp({super.key, required this.router});
+/// Initializes get_it (Hive, services, store, bootstrap) and returns the router.
+Future<GoRouter> _bootstrapApp() async {
+  await setupGetIt();
+  return getIt<GoRouter>();
+}
 
-  final GoRouter router;
+class GeoTaskApp extends StatefulWidget {
+  const GeoTaskApp({super.key, required this.bootstrap});
+
+  final Future<GoRouter> Function() bootstrap;
+
+  @override
+  State<GeoTaskApp> createState() => _GeoTaskAppState();
+}
+
+class _GeoTaskAppState extends State<GeoTaskApp> {
+  GoRouter? _router;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.bootstrap().then((router) {
+      if (mounted) setState(() => _router = router);
+    }).catchError((e, st) {
+      logError('Bootstrap failed', e, st);
+      if (mounted) setState(() => _router = _buildErrorRouter(e));
+    });
+  }
+
+  GoRouter _buildErrorRouter(Object error) {
+    return GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Failed to start: $error',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_router == null) {
+      return MaterialApp(
+        title: 'Geo-Task',
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
     return MaterialApp.router(
       title: 'Geo-Task',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
-      routerConfig: router,
+      theme: AppTheme.light,
+      routerConfig: _router,
     );
   }
 }

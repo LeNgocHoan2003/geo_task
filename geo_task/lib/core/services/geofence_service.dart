@@ -4,23 +4,42 @@ import 'package:flutter_background_geofencing/flutter_background_geofencing.dart
 
 import '../../features/reminder/domain/entities/geo_reminder.dart';
 import '../contracts/geofence_service_interface.dart';
+import '../contracts/geofence_event_handler_interface.dart';
+import '../contracts/location_service_interface.dart';
 import '../contracts/notification_service_interface.dart';
 import '../models/geofence_reminder_mapping.dart';
+import '../models/location_point.dart';
 import '../utils/logger.dart';
+import 'geofence/geofence_position_checker.dart';
+import 'geofence/geofence_region_mapper.dart';
+import 'geofence/notification_geofence_event_handler.dart';
 
 /// Uses native platform geofencing (Android GeofencingClient / iOS CLLocationManager)
 /// so triggers work when the app is in background or killed.
-/// Implements [GeofenceServiceInterface] and depends on [NotificationServiceInterface] (SOLID).
+/// When native does not fire events, a manual check using [LocationServiceInterface]
+/// position stream triggers enter/exit so notifications still show (e.g. foreground).
 class GeofenceService implements GeofenceServiceInterface {
-  GeofenceService(this._notificationService) {
+  GeofenceService(this._notificationService, this._locationService) {
     _service = GeofencingService();
+    _regionMapper = GeofenceRegionMapper(minRadiusMeters: _minRadiusMeters);
+    _eventHandler = NotificationGeofenceEventHandler(_notificationService);
+    _positionChecker = GeofencePositionChecker(
+      _mapping,
+      _eventHandler,
+      minRadiusMeters: _minRadiusMeters,
+    );
   }
 
   final NotificationServiceInterface _notificationService;
+  final LocationServiceInterface _locationService;
   late final GeofencingService _service;
+  late final GeofenceRegionMapper _regionMapper;
+  late final GeofencePositionChecker _positionChecker;
+  late final GeofenceEventHandlerInterface _eventHandler;
   final _mapping = GeofenceReminderMapping();
   final _registeredIds = <String>[];
   StreamSubscription<GeofenceEvent>? _eventSubscription;
+  StreamSubscription<LocationPoint>? _positionSubscription;
   bool _started = false;
 
   /// Minimum radius for native APIs (Android recommends 100m).
@@ -28,21 +47,6 @@ class GeofenceService implements GeofenceServiceInterface {
 
   @override
   bool get isRunning => _started;
-
-  GeofenceRegion _toRegion(GeoReminder r) {
-    final radius = r.radius < _minRadiusMeters ? _minRadiusMeters : r.radius;
-    return GeofenceRegion(
-      id: r.id,
-      latitude: r.latitude,
-      longitude: r.longitude,
-      radius: radius,
-      data: {
-        'title': r.title,
-        'description': r.description,
-        'triggerType': r.triggerType.name,
-      },
-    );
-  }
 
   @override
   Future<void> start(List<GeoReminder> activeReminders) async {
@@ -58,21 +62,25 @@ class GeofenceService implements GeofenceServiceInterface {
 
       _eventSubscription = _service.onGeofenceEvent.listen(_onGeofenceEvent);
 
+      _positionSubscription = _locationService.getPositionStream().listen(
+        _positionChecker.onPositionUpdate,
+        onError: (e) => logError('Position stream error', e),
+      );
+
       await _service.startService(
         notificationTitle: 'Geo-Task',
         notificationText: 'Monitoring reminder locations',
-        enableFallbackNotifications: true,
-        fallbackNotificationTitle: 'Geo-Task',
-        fallbackNotificationBody: 'You have a location reminder',
+        enableFallbackNotifications: false,
       );
 
       _started = true;
-      logInfo('GeofenceService started (native background geofencing)');
+      logInfo('GeofenceService started (native + manual position check)');
 
       await _syncRegions(activeReminders);
     } catch (e, st) {
       logError('GeofenceService start failed', e, st);
-      rethrow;
+      _started = false;
+      // Do not rethrow: app should still open (e.g. after being killed)
     }
   }
 
@@ -80,11 +88,12 @@ class GeofenceService implements GeofenceServiceInterface {
     await _service.removeAllGeofences();
     _registeredIds.clear();
     _mapping.clear();
+    _positionChecker.clearState();
 
     for (final r in reminders) {
       if (r.isActive) {
         _mapping.add(r);
-        await _service.addGeofence(_toRegion(r));
+        await _service.addGeofence(_regionMapper.toRegion(r));
         _registeredIds.add(r.id);
       }
     }
@@ -114,7 +123,7 @@ class GeofenceService implements GeofenceServiceInterface {
   Future<void> addReminder(GeoReminder reminder) async {
     if (!reminder.isActive) return;
     _mapping.add(reminder);
-    await _service.addGeofence(_toRegion(reminder));
+    await _service.addGeofence(_regionMapper.toRegion(reminder));
     _registeredIds.add(reminder.id);
     logInfo('Geofence added for reminder ${reminder.id}');
   }
@@ -137,6 +146,8 @@ class GeofenceService implements GeofenceServiceInterface {
     if (!_started) return;
     await _eventSubscription?.cancel();
     _eventSubscription = null;
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
     await _service.stopService();
     _registeredIds.clear();
     _mapping.clear();

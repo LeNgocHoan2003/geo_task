@@ -11,4 +11,7 @@ abstract class LocationServiceInterface {
 
   /// Gets current position. Throws if services disabled or permission denied.
   Future<LocationPoint> getCurrentPosition();
+
+  /// Stream of position updates. Use for manual geofence checks when native events do not fire.
+  Stream<LocationPoint> getPositionStream();
 }
