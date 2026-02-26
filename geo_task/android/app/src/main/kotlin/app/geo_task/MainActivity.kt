@@ -1,4 +1,4 @@
-package com.example.geo_task
+package app.geo_task
 
 import io.flutter.embedding.android.FlutterActivity
 

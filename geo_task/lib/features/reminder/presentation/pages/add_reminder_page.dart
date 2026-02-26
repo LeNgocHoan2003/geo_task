@@ -502,7 +502,7 @@ class _MapPreview extends StatelessWidget {
                 TileLayer(
                   urlTemplate:
                       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.geo_task',
+                  userAgentPackageName: 'app.geo_task',
                 ),
                 CircleLayer(
                   circles: [
