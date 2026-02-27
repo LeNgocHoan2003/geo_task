@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   # Location & geofencing
   geolocator: ^13.0.2
   flutter_background_geofencing: ^1.0.0
@@ -31,6 +33,7 @@ dependencies:
   get_it: ^8.0.3
   # Utils
   uuid: ^4.5.1
+  flutter_gen: ^5.9.0
 
 dev_dependencies:
   flutter_test:
@@ -43,6 +46,7 @@ dev_dependencies:
   flutter_native_splash: ^2.4.7
 
 flutter:
+  generate: true
   uses-material-design: true
   assets:
     - assets/

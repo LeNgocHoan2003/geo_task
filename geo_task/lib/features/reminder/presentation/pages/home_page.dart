@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geo_task/l10n/app_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:go_router/go_router.dart';
 
@@ -48,24 +49,37 @@ class _HomePageState extends State<HomePage> {
     await widget.store.showTestNotification(reminder);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Test notification sent')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.testNotificationSent,
+          ),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'Geo-Task',
+          t.appTitle,
           style: AppTypography.headlineMedium.copyWith(
-            color: AppColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 20,
           ),
         ),
-        backgroundColor: AppColors.surface,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: t.settingsTitle,
+            onPressed: () => context.push(AppRoutes.settings),
+          ),
+        ],
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -78,23 +92,26 @@ class _HomePageState extends State<HomePage> {
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(AppSpacing.cardRadiusSmall),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.star_rounded,
-                    color: AppColors.primary,
+                      color: AppColors.primary,
                     size: 24,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
-                      'Keep the app running to receive location-based reminders.',
+                      t.homeHintBanner,
                       style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
+                        color:
+                            Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -151,21 +168,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _confirmDelete(BuildContext context, GeoReminder reminder) {
+    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
-        title: const Text('Delete reminder?'),
+        title: Text(t.deleteReminderTitle),
         content: Text(
-          'Remove "${reminder.title}"? This cannot be undone.',
+          t.deleteReminderMessage(reminder.title),
           style: AppTypography.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(t.deleteReminderCancel),
           ),
           FilledButton(
             onPressed: () {
@@ -175,7 +193,7 @@ class _HomePageState extends State<HomePage> {
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.error,
             ),
-            child: const Text('Delete'),
+            child: Text(t.deleteReminderConfirm),
           ),
         ],
       ),
@@ -190,6 +208,8 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
@@ -199,7 +219,7 @@ class _EmptyState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.xxl),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: AppColors.primary.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -210,17 +230,18 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xxl),
             Text(
-              'No reminders yet',
+              t.homeEmptyTitle,
               style: AppTypography.headlineMedium.copyWith(
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Tap + to add a location-based reminder.',
+              t.homeEmptySubtitle,
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color:
+                    Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
@@ -228,7 +249,7 @@ class _EmptyState extends StatelessWidget {
             FilledButton.icon(
               onPressed: onAddTap,
               icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text('Add reminder'),
+              label: Text(t.homeEmptyAddButton),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xl,
@@ -260,6 +281,8 @@ class _ReminderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final locationDisplay = reminder.locationName.isNotEmpty
         ? reminder.locationName
         : '${reminder.latitude.toStringAsFixed(4)}, ${reminder.longitude.toStringAsFixed(4)}';
@@ -272,9 +295,12 @@ class _ReminderCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(
+              color:
+                  Theme.of(context).colorScheme.outline.withOpacity(0.25),
+            ),
             boxShadow: AppShadows.card,
           ),
           child: Column(
@@ -294,8 +320,10 @@ class _ReminderCard extends StatelessWidget {
                                 ? null
                                 : TextDecoration.lineThrough,
                             color: reminder.isActive
-                                ? AppColors.textPrimary
-                                : AppColors.textTertiary,
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -306,14 +334,17 @@ class _ReminderCard extends StatelessWidget {
                             Icon(
                               Icons.place_outlined,
                               size: 14,
-                              color: AppColors.textTertiary,
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: AppSpacing.xs),
                             Expanded(
                               child: Text(
                                 locationDisplay,
                                 style: AppTypography.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -329,7 +360,9 @@ class _ReminderCard extends StatelessWidget {
                             Text(
                               '${reminder.radius.toInt()} m',
                               style: AppTypography.labelMedium.copyWith(
-                                color: AppColors.textTertiary,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -349,7 +382,9 @@ class _ReminderCard extends StatelessWidget {
                 Text(
                   reminder.description,
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textTertiary,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -363,23 +398,25 @@ class _ReminderCard extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.notifications_active_outlined),
                       onPressed: onTestTrigger,
-                      tooltip: 'Test notification (debug)',
+                      tooltip: t.testNotificationTooltip,
                       style: IconButton.styleFrom(
-                        foregroundColor: AppColors.textSecondary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: onTap,
-                    tooltip: 'Edit',
+                    tooltip: t.editTooltip,
                     style: IconButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     onPressed: onDelete,
-                    tooltip: 'Delete',
+                    tooltip: t.deleteTooltip,
                     style: IconButton.styleFrom(
                       foregroundColor: AppColors.error,
                     ),
