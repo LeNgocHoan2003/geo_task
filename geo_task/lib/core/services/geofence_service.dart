@@ -53,11 +53,22 @@ class GeofenceService implements GeofenceServiceInterface {
     logInfo('[GeofenceService] start() called with ${activeReminders.length} reminders');
     if (_started) {
       logInfo('[GeofenceService] already started, syncing regions');
+      await _service.initialize();
       await _syncRegions(activeReminders);
       return;
     }
 
     try {
+      // Ensure we already have runtime location permission (coarse/fine, and
+      // background where required) before starting the foreground service.
+      final hasLocationPermission = await _locationService.ensurePermission();
+      if (!hasLocationPermission) {
+        logInfo(
+          '[GeofenceService] start() aborted: location permission not granted',
+        );
+        return;
+      }
+
       logInfo('[GeofenceService] initializing...');
       await _service.initialize();
       await _service.requestPermissions();
@@ -140,6 +151,10 @@ class GeofenceService implements GeofenceServiceInterface {
   @override
   Future<void> addReminder(GeoReminder reminder) async {
     logInfo('[GeofenceService] addReminder() called: ${reminder.id} "${reminder.title}" active=${reminder.isActive}');
+    if (!_started) {
+      logInfo('[GeofenceService] addReminder() skipped: service not started');
+      return;
+    }
     if (!reminder.isActive) {
       logInfo('[GeofenceService] reminder is inactive, skipping');
       return;
@@ -153,6 +168,10 @@ class GeofenceService implements GeofenceServiceInterface {
   @override
   Future<void> removeReminder(String id) async {
     logInfo('[GeofenceService] removeReminder() called: $id');
+    if (!_started) {
+      logInfo('[GeofenceService] removeReminder() skipped: service not started');
+      return;
+    }
     _mapping.remove(id);
     _registeredIds.remove(id);
     await _service.removeGeofence(id);
@@ -162,6 +181,12 @@ class GeofenceService implements GeofenceServiceInterface {
   @override
   Future<void> syncReminders(List<GeoReminder> reminders) async {
     logInfo('[GeofenceService] syncReminders() called with ${reminders.length} reminders');
+    if (!_started) {
+      logInfo(
+        '[GeofenceService] syncReminders() skipped: service not started',
+      );
+      return;
+    }
     await _syncRegions(reminders);
   }
 

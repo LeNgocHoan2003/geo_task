@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:geo_task/l10n/app_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+import '../../../../core/contracts/geofence_service_interface.dart';
+import '../../../../core/di/injection.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -28,6 +32,28 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     widget.store.loadReminders();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkRequiredPermissions();
+    });
+  }
+
+  Future<void> _checkRequiredPermissions() async {
+    final locationPermission = await Geolocator.checkPermission();
+    final notificationStatus = await Permission.notification.status;
+    if (!mounted) return;
+    final hasAlwaysLocation = locationPermission == LocationPermission.always;
+    final hasNotification = notificationStatus.isGranted;
+    if (!hasAlwaysLocation || !hasNotification) {
+      context.push(AppRoutes.locationPermission);
+      return;
+    }
+
+    // Permissions are granted – ensure background geofencing service is running.
+    final geofenceService = getIt<GeofenceServiceInterface>();
+    if (!geofenceService.isRunning) {
+      // Use current reminders from the store as the source of truth.
+      await geofenceService.start(widget.store.reminders.toList());
+    }
   }
 
   Future<void> _openAddReminder() async {
