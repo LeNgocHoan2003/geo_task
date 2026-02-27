@@ -65,7 +65,8 @@ class NotificationService implements NotificationServiceInterface {
     }
 
     logInfo('[NotificationService] initializing plugin...');
-    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification_map');
+    // Use existing launcher icon from Android resources to avoid invalid_icon errors.
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_stat_name');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -135,7 +136,8 @@ class NotificationService implements NotificationServiceInterface {
       channelShowBadge: true,
       playSound: true,
       enableVibration: true,
-      icon: '@drawable/ic_notification_map',
+      // Use app launcher icon which always exists by default.
+      icon: '@drawable/ic_stat_name',
       largeIcon: largeIcon,
     );
     const iosDetails = DarwinNotificationDetails(
