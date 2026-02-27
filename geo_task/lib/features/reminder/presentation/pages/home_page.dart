@@ -67,43 +67,84 @@ class _HomePageState extends State<HomePage> {
         ),
         backgroundColor: AppColors.surface,
       ),
-      body: Observer(
-        builder: (context) {
-          if (widget.store.isLoading && widget.store.reminders.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2,
-              ),
-            );
-          }
-          if (widget.store.reminders.isEmpty) {
-            return _EmptyState(onAddTap: _openAddReminder);
-          }
-          return ListView.builder(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.screenPaddingH,
               vertical: AppSpacing.screenPaddingV,
             ),
-            itemCount: widget.store.reminders.length,
-            itemBuilder: (context, index) {
-              final r = widget.store.reminders[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.listItemGap),
-                child: _ReminderCard(
-                  reminder: r,
-                  onToggle: (value) =>
-                      widget.store.toggleReminder(r.id, value),
-                  onTap: () => _openEditReminder(r),
-                  onDelete: () => _confirmDelete(context, r),
-                  onTestTrigger: kDebugMode
-                      ? () => _testTriggerNotification(r)
-                      : null,
-                ),
-              );
-            },
-          );
-        },
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadiusSmall),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.star_rounded,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      'Keep the app running to receive location-based reminders.',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Observer(
+              builder: (context) {
+                if (widget.store.isLoading &&
+                    widget.store.reminders.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 2,
+                    ),
+                  );
+                }
+                if (widget.store.reminders.isEmpty) {
+                  return _EmptyState(onAddTap: _openAddReminder);
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPaddingH,
+                    vertical: AppSpacing.screenPaddingV,
+                  ),
+                  itemCount: widget.store.reminders.length,
+                  itemBuilder: (context, index) {
+                    final r = widget.store.reminders[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                          bottom: AppSpacing.listItemGap),
+                      child: _ReminderCard(
+                        reminder: r,
+                        onToggle: (value) =>
+                            widget.store.toggleReminder(r.id, value),
+                        onTap: () => _openEditReminder(r),
+                        onDelete: () => _confirmDelete(context, r),
+                        onTestTrigger: kDebugMode
+                            ? () => _testTriggerNotification(r)
+                            : null,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: _PremiumFab(onPressed: _openAddReminder),
     );
