@@ -1,7 +1,7 @@
 name: geo_task
 description: "Location-based reminder app (Geo-Task) – geofencing and local notifications."
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0+2
 
 environment:
   sdk: ^3.9.2
