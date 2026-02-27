@@ -10,6 +10,7 @@ import '../../features/reminder/data/datasources/reminder_local_datasource.dart'
 import '../../features/reminder/data/datasources/reminder_local_datasource_impl.dart';
 import '../../features/reminder/data/repositories/reminder_repository_impl.dart';
 import '../../features/reminder/domain/repositories/reminder_repository.dart';
+import '../../features/reminder/domain/services/reminder_domain_service.dart';
 import '../../features/reminder/domain/usecases/reminder_use_cases.dart';
 import '../../features/reminder/presentation/stores/reminder_store.dart';
 
@@ -55,6 +56,13 @@ Future<void> setupGetIt() async {
   getIt.registerSingleton<DeleteReminder>(DeleteReminder(repo));
   getIt.registerSingleton<ToggleReminder>(ToggleReminder(repo));
 
+  getIt.registerSingleton<ReminderDomainService>(
+    ReminderDomainService(
+      geofenceService: getIt<GeofenceServiceInterface>(),
+      notificationService: getIt<NotificationServiceInterface>(),
+    ),
+  );
+
   getIt.registerSingleton<ReminderStore>(
     ReminderStore(
       getReminders: getIt<GetReminders>(),
@@ -62,9 +70,8 @@ Future<void> setupGetIt() async {
       updateReminder: getIt<UpdateReminder>(),
       deleteReminder: getIt<DeleteReminder>(),
       toggleReminder: getIt<ToggleReminder>(),
-      geofenceService: getIt<GeofenceServiceInterface>(),
+      reminderDomainService: getIt<ReminderDomainService>(),
       locationService: getIt<LocationServiceInterface>(),
-      notificationService: getIt<NotificationServiceInterface>(),
     ),
   );
 

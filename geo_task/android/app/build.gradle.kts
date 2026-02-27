@@ -53,14 +53,18 @@ android {
     }
 
     buildTypes {
-        release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+    release {
+        signingConfig = if (keystorePropertiesFile.exists()) {
+            signingConfigs.getByName("release")
+        } else {
+            signingConfigs.getByName("debug")
         }
+
+        isMinifyEnabled = false
+        isShrinkResources = false
     }
+
+}
 }
 
 dependencies {

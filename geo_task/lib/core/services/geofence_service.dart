@@ -50,21 +50,37 @@ class GeofenceService implements GeofenceServiceInterface {
 
   @override
   Future<void> start(List<GeoReminder> activeReminders) async {
+    logInfo('[GeofenceService] start() called with ${activeReminders.length} reminders');
     if (_started) {
-      logInfo('GeofenceService already started, syncing regions');
+      logInfo('[GeofenceService] already started, syncing regions');
+      await _service.initialize();
       await _syncRegions(activeReminders);
       return;
     }
 
     try {
+      // Ensure we already have runtime location permission (coarse/fine, and
+      // background where required) before starting the foreground service.
+      final hasLocationPermission = await _locationService.ensurePermission();
+      if (!hasLocationPermission) {
+        logInfo(
+          '[GeofenceService] start() aborted: location permission not granted',
+        );
+        return;
+      }
+
+      logInfo('[GeofenceService] initializing...');
       await _service.initialize();
       await _service.requestPermissions();
+      logInfo('[GeofenceService] permissions granted');
 
+      logInfo('[GeofenceService] setting up native geofence event listener');
       _eventSubscription = _service.onGeofenceEvent.listen(_onGeofenceEvent);
 
+      logInfo('[GeofenceService] setting up position stream for manual check');
       _positionSubscription = _locationService.getPositionStream().listen(
         _positionChecker.onPositionUpdate,
-        onError: (e) => logError('Position stream error', e),
+        onError: (e) => logError('[GeofenceService] position stream error', e),
       );
 
       await _service.startService(
@@ -72,41 +88,53 @@ class GeofenceService implements GeofenceServiceInterface {
         notificationText: 'Monitoring reminder locations',
         enableFallbackNotifications: false,
       );
+      logInfo('[GeofenceService] background service started');
 
       _started = true;
-      logInfo('GeofenceService started (native + manual position check)');
+      logInfo('[GeofenceService] started (native + manual position check)');
 
       await _syncRegions(activeReminders);
     } catch (e, st) {
-      logError('GeofenceService start failed', e, st);
+      logError('[GeofenceService] start failed', e, st);
       _started = false;
       // Do not rethrow: app should still open (e.g. after being killed)
     }
   }
 
   Future<void> _syncRegions(List<GeoReminder> reminders) async {
+    logInfo('[GeofenceService] _syncRegions() called with ${reminders.length} reminders');
     await _service.removeAllGeofences();
     _registeredIds.clear();
     _mapping.clear();
     _positionChecker.clearState();
+    logInfo('[GeofenceService] cleared all existing geofences');
 
+    final activeCount = reminders.where((r) => r.isActive).length;
     for (final r in reminders) {
       if (r.isActive) {
         _mapping.add(r);
         await _service.addGeofence(_regionMapper.toRegion(r));
         _registeredIds.add(r.id);
+        logInfo('[GeofenceService] added geofence: ${r.id} "${r.title}" (${r.triggerType.name})');
       }
     }
-    logInfo('Synced ${_registeredIds.length} geofence regions');
+    logInfo('[GeofenceService] synced $activeCount geofence regions (total: ${_registeredIds.length})');
   }
 
   void _onGeofenceEvent(GeofenceEvent event) {
+    logInfo('[GeofenceService] native geofence event: regionId=${event.regionId} type=${event.type}');
     final reminder = _mapping.get(event.regionId);
-    if (reminder == null) return;
+    if (reminder == null) {
+      logInfo('[GeofenceService] no reminder found for regionId=${event.regionId}, ignoring');
+      return;
+    }
 
     final wantEnter = reminder.triggerType == GeoTriggerType.enter;
     final isEnter = event.type == GeofenceEventType.enter;
-    if (wantEnter != isEnter) return;
+    if (wantEnter != isEnter) {
+      logInfo('[GeofenceService] trigger mismatch: want ${reminder.triggerType.name} but got ${event.type}, ignoring');
+      return;
+    }
 
     final title = reminder.title;
     final defaultMessage =
@@ -116,42 +144,68 @@ class GeofenceService implements GeofenceServiceInterface {
         : '$title — $defaultMessage';
     final id = reminder.id.hashCode.abs() % 0x7FFFFFFF;
 
+    logInfo('[GeofenceService] showing notification: "$title" (id=$id)');
     _notificationService.showReminder(id: id, title: title, body: body);
   }
 
   @override
   Future<void> addReminder(GeoReminder reminder) async {
-    if (!reminder.isActive) return;
+    logInfo('[GeofenceService] addReminder() called: ${reminder.id} "${reminder.title}" active=${reminder.isActive}');
+    if (!_started) {
+      logInfo('[GeofenceService] addReminder() skipped: service not started');
+      return;
+    }
+    if (!reminder.isActive) {
+      logInfo('[GeofenceService] reminder is inactive, skipping');
+      return;
+    }
     _mapping.add(reminder);
     await _service.addGeofence(_regionMapper.toRegion(reminder));
     _registeredIds.add(reminder.id);
-    logInfo('Geofence added for reminder ${reminder.id}');
+    logInfo('[GeofenceService] geofence added for reminder ${reminder.id}');
   }
 
   @override
   Future<void> removeReminder(String id) async {
+    logInfo('[GeofenceService] removeReminder() called: $id');
+    if (!_started) {
+      logInfo('[GeofenceService] removeReminder() skipped: service not started');
+      return;
+    }
     _mapping.remove(id);
     _registeredIds.remove(id);
     await _service.removeGeofence(id);
-    logInfo('Geofence removed for $id');
+    logInfo('[GeofenceService] geofence removed for $id');
   }
 
   @override
   Future<void> syncReminders(List<GeoReminder> reminders) async {
+    logInfo('[GeofenceService] syncReminders() called with ${reminders.length} reminders');
+    if (!_started) {
+      logInfo(
+        '[GeofenceService] syncReminders() skipped: service not started',
+      );
+      return;
+    }
     await _syncRegions(reminders);
   }
 
   @override
   Future<void> stop() async {
-    if (!_started) return;
+    logInfo('[GeofenceService] stop() called');
+    if (!_started) {
+      logInfo('[GeofenceService] not started, nothing to stop');
+      return;
+    }
     await _eventSubscription?.cancel();
     _eventSubscription = null;
     await _positionSubscription?.cancel();
     _positionSubscription = null;
+    logInfo('[GeofenceService] cancelled event and position subscriptions');
     await _service.stopService();
     _registeredIds.clear();
     _mapping.clear();
     _started = false;
-    logInfo('GeofenceService stopped');
+    logInfo('[GeofenceService] stopped');
   }
 }
