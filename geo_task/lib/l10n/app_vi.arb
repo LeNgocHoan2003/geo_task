@@ -1,0 +1,59 @@
+{
+  "@@locale": "vi",
+  "appTitle": "Geo-Task",
+
+  "homeHintBanner": "Giữ ứng dụng chạy để nhận nhắc nhở theo vị trí.",
+  "homeEmptyTitle": "Chưa có nhắc nhở nào",
+  "homeEmptySubtitle": "Nhấn + để thêm một nhắc nhở theo vị trí.",
+  "homeEmptyAddButton": "Thêm nhắc nhở",
+
+  "deleteReminderTitle": "Xoá nhắc nhở?",
+  "deleteReminderMessage": "Xoá \"{title}\"? Hành động này không thể hoàn tác.",
+  "@deleteReminderMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteReminderCancel": "Huỷ",
+  "deleteReminderConfirm": "Xoá",
+
+  "testNotificationSent": "Đã gửi thông báo thử",
+  "editTooltip": "Sửa",
+  "deleteTooltip": "Xoá",
+  "testNotificationTooltip": "Thông báo thử (debug)",
+
+  "settingsTitle": "Cài đặt",
+  "settingsDarkMode": "Chế độ tối",
+  "settingsLanguage": "Ngôn ngữ",
+  "languageEnglish": "Tiếng Anh",
+  "languageVietnamese": "Tiếng Việt",
+
+  "addReminderTitle": "Thêm nhắc nhở",
+  "editReminderTitle": "Sửa nhắc nhở",
+  "addReminderSearchHint": "Tìm kiếm địa điểm",
+  "addReminderMapHint": "Chạm vào bản đồ để chọn vị trí nhắc nhở.",
+  "addReminderTitleLabel": "Tiêu đề",
+  "addReminderTitleHint": "vd. Mua sữa",
+  "addReminderDescriptionLabel": "Mô tả (không bắt buộc)",
+  "addReminderDescriptionHint": "vd. Đừng quên nhé!",
+  "addReminderRadiusLabel": "Bán kính",
+  "addReminderNotifyWhenLabel": "Thông báo khi",
+  "addReminderEnterLabel": "Vào vùng",
+  "addReminderExitLabel": "Ra khỏi vùng",
+  "addReminderSaveButton": "Lưu nhắc nhở",
+  "addReminderUpdateButton": "Cập nhật nhắc nhở",
+  "addReminderDeleteButton": "Xoá nhắc nhở",
+  "addReminderTitleRequired": "Vui lòng nhập tiêu đề",
+  "addReminderFieldRequired": "Bắt buộc",
+  "addReminderSaveFailed": "Lưu không thành công: \"{error}\"",
+  "@addReminderSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
+}
+

@@ -1,0 +1,59 @@
+{
+  "@@locale": "en",
+  "appTitle": "Geo-Task",
+
+  "homeHintBanner": "Keep the app running to receive location-based reminders.",
+  "homeEmptyTitle": "No reminders yet",
+  "homeEmptySubtitle": "Tap + to add a location-based reminder.",
+  "homeEmptyAddButton": "Add reminder",
+
+  "deleteReminderTitle": "Delete reminder?",
+  "deleteReminderMessage": "Remove \"{title}\"? This cannot be undone.",
+  "@deleteReminderMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteReminderCancel": "Cancel",
+  "deleteReminderConfirm": "Delete",
+
+  "testNotificationSent": "Test notification sent",
+  "editTooltip": "Edit",
+  "deleteTooltip": "Delete",
+  "testNotificationTooltip": "Test notification (debug)",
+
+  "settingsTitle": "Settings",
+  "settingsDarkMode": "Dark mode",
+  "settingsLanguage": "Language",
+  "languageEnglish": "English",
+  "languageVietnamese": "Vietnamese",
+
+  "addReminderTitle": "Add Reminder",
+  "editReminderTitle": "Edit Reminder",
+  "addReminderSearchHint": "Search for a place",
+  "addReminderMapHint": "Tap on the map to set the reminder location.",
+  "addReminderTitleLabel": "Title",
+  "addReminderTitleHint": "e.g. Buy milk",
+  "addReminderDescriptionLabel": "Description (optional)",
+  "addReminderDescriptionHint": "e.g. Don't forget!",
+  "addReminderRadiusLabel": "Radius",
+  "addReminderNotifyWhenLabel": "Notify when",
+  "addReminderEnterLabel": "Enter",
+  "addReminderExitLabel": "Exit",
+  "addReminderSaveButton": "Save Reminder",
+  "addReminderUpdateButton": "Update Reminder",
+  "addReminderDeleteButton": "Delete reminder",
+  "addReminderTitleRequired": "Please enter a title",
+  "addReminderFieldRequired": "Required",
+  "addReminderSaveFailed": "Failed to save: \"{error}\"",
+  "@addReminderSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
+}
+

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geo_task/l10n/app_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
@@ -97,7 +98,11 @@ class _AddReminderPageState extends State<AddReminderPage> {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a title')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.addReminderTitleRequired,
+          ),
+        ),
       );
       return;
     }
@@ -137,7 +142,13 @@ class _AddReminderPageState extends State<AddReminderPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: $e')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.addReminderSaveFailed(
+                  e.toString(),
+                ),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -147,27 +158,32 @@ class _AddReminderPageState extends State<AddReminderPage> {
   Future<void> _onDelete() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        ),
-        title: const Text('Delete reminder?'),
-        content: Text(
-          'Remove "${_titleController.text.trim()}"? This cannot be undone.',
-          style: AppTypography.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+      builder: (ctx) {
+        final t = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Delete'),
+          title: Text(t.deleteReminderTitle),
+          content: Text(
+            t.deleteReminderMessage(
+                _titleController.text.trim(),
+            ),
+            style: AppTypography.bodyMedium,
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(t.deleteReminderCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+              child: Text(t.deleteReminderConfirm),
+            ),
+          ],
+        );
+      },
     );
     if (confirm != true || !mounted) return;
     final existing = widget.existingReminder;
@@ -184,14 +200,20 @@ class _AddReminderPageState extends State<AddReminderPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          _isEditing ? 'Edit Reminder' : 'Add Reminder',
-          style: AppTypography.titleLarge.copyWith(color: AppColors.textPrimary),
+          _isEditing ? t.editReminderTitle : t.addReminderTitle,
+          style: AppTypography.titleLarge.copyWith(
+            color: colorScheme.onSurface,
+          ),
         ),
-        backgroundColor: AppColors.surface,
+        backgroundColor: colorScheme.surface,
       ),
       body: Observer(
         builder: (_) {
@@ -213,6 +235,8 @@ class _AddReminderPageState extends State<AddReminderPage> {
   }
 
   Widget _buildBody() {
+    final t = AppLocalizations.of(context)!;
+
     return Column(
       children: [
         Expanded(
@@ -229,11 +253,11 @@ class _AddReminderPageState extends State<AddReminderPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Search bar (place autocomplete)
-                  _SearchBar(
-                    controller: _searchController,
-                    hint: 'Search for a place',
-                  ),
+                  // // Search bar (place autocomplete)
+                  // _SearchBar(
+                  //   controller: _searchController,
+                  //   hint: t.addReminderSearchHint,
+                  // ),
                   const SizedBox(height: AppSpacing.lg),
 
                   // Map with pin and radius circle
@@ -250,9 +274,9 @@ class _AddReminderPageState extends State<AddReminderPage> {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Tap on the map to set the reminder location.',
+                    t.addReminderMapHint,
                     style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textTertiary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -260,12 +284,14 @@ class _AddReminderPageState extends State<AddReminderPage> {
                   // Title
                   TextFormField(
                     controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Title',
-                      hintText: 'e.g. Buy milk',
+                    decoration: InputDecoration(
+                      labelText: t.addReminderTitleLabel,
+                      hintText: t.addReminderTitleHint,
                     ),
                     validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Required' : null,
+                        (v == null || v.trim().isEmpty)
+                            ? t.addReminderFieldRequired
+                            : null,
                     textCapitalization: TextCapitalization.sentences,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -273,9 +299,9 @@ class _AddReminderPageState extends State<AddReminderPage> {
                   // Description
                   TextFormField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Description (optional)',
-                      hintText: 'e.g. Don\'t forget!',
+                    decoration: InputDecoration(
+                      labelText: t.addReminderDescriptionLabel,
+                      hintText: t.addReminderDescriptionHint,
                     ),
                     maxLines: 2,
                     textCapitalization: TextCapitalization.sentences,
@@ -287,9 +313,9 @@ class _AddReminderPageState extends State<AddReminderPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Radius',
+                        t.addReminderRadiusLabel,
                         style: AppTypography.titleSmall.copyWith(
-                          color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Container(
@@ -331,7 +357,7 @@ class _AddReminderPageState extends State<AddReminderPage> {
 
                   // Trigger type – segmented control
                   Text(
-                    'Notify when',
+                    t.addReminderNotifyWhenLabel,
                     style: AppTypography.labelLarge.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -340,15 +366,15 @@ class _AddReminderPageState extends State<AddReminderPage> {
                   SegmentedControl<GeoTriggerType>(
                     value: _triggerType,
                     onChanged: (v) => setState(() => _triggerType = v),
-                    segments: const [
+                    segments: [
                       SegmentItem(
                         value: GeoTriggerType.enter,
-                        label: 'Enter',
+                        label: t.addReminderEnterLabel,
                         icon: Icons.login_rounded,
                       ),
                       SegmentItem(
                         value: GeoTriggerType.exit,
-                        label: 'Exit',
+                        label: t.addReminderExitLabel,
                         icon: Icons.logout_rounded,
                       ),
                     ],
@@ -369,7 +395,7 @@ class _AddReminderPageState extends State<AddReminderPage> {
             bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.lg,
           ),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
                 color: AppColors.shadowColor,
@@ -385,7 +411,7 @@ class _AddReminderPageState extends State<AddReminderPage> {
                 TextButton.icon(
                   onPressed: _saving ? null : _onDelete,
                   icon: const Icon(Icons.delete_outline, size: 20),
-                  label: const Text('Delete reminder'),
+                  label: Text(t.addReminderDeleteButton),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.error,
                   ),
@@ -413,7 +439,9 @@ class _AddReminderPageState extends State<AddReminderPage> {
                         ),
                       )
                     : Text(
-                        _isEditing ? 'Update Reminder' : 'Save Reminder',
+                        _isEditing
+                            ? t.addReminderUpdateButton
+                            : t.addReminderSaveButton,
                         style: AppTypography.titleSmall.copyWith(
                           color: Colors.white,
                         ),

@@ -4,13 +4,17 @@ import 'package:go_router/go_router.dart';
 import '../../features/reminder/domain/entities/geo_reminder.dart';
 import '../../features/reminder/presentation/pages/add_reminder_page.dart';
 import '../../features/reminder/presentation/pages/home_page.dart';
+import '../../features/reminder/presentation/pages/settings_page.dart';
 import '../../features/reminder/presentation/stores/reminder_store.dart';
+import '../../features/reminder/presentation/pages/location_permission_page.dart';
 
 /// Route path constants (single responsibility).
 abstract class AppRoutes {
   static const String home = '/';
   static const String add = '/add';
   static const String edit = '/edit';
+  static const String settings = '/settings';
+  static const String locationPermission = '/location-permission';
 
   static String editWithId(String id) => '/edit/$id';
 }
@@ -41,6 +45,14 @@ GoRouter createAppRouter(ReminderStore store) {
       GoRoute(
         path: AppRoutes.add,
         builder: (context, state) => AddReminderPage(store: store),
+      ),
+      GoRoute(
+        path: AppRoutes.settings,
+        builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.locationPermission,
+        builder: (context, state) => const LocationPermissionPage(),
       ),
     ],
   );
